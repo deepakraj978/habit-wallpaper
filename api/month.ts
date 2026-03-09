@@ -1,106 +1,112 @@
-import { createCanvas } from "canvas";
+import { ImageResponse } from '@vercel/og'
 
-function calculateStreak(dates: string[]) {
-
-  const sorted = dates.sort();
-  const today = new Date();
-
-  let streak = 0;
-
-  for (let i = sorted.length - 1; i >= 0; i--) {
-
-    const d = new Date(sorted[i]);
-
-    const diff =
-      Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (diff === streak) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-
-  return streak;
+export const config = {
+  runtime: 'edge',
 }
 
-export default function handler(req: any, res: any) {
+function calculateStreak(dates: string[]) {
+  const sorted = dates.sort()
+  const today = new Date()
 
-  const width = parseInt(req.query.width || "1170");
-  const height = parseInt(req.query.height || "2532");
+  let streak = 0
 
-  const habit = (req.query.habit || "").split(",");
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const d = new Date(sorted[i])
 
-  const streak = calculateStreak(habit);
+    const diff =
+      Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
 
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext("2d");
-
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, width, height);
-
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
-
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-
-  const startWeekday = firstDay.getDay();
-  const daysInMonth = lastDay.getDate();
-
-  const dot = 22;
-  const gap = 26;
-
-  let xStart = width / 2 - 180;
-  let yStart = height / 2 - 200;
-
-  let day = 1;
-
-  for (let row = 0; row < 6; row++) {
-
-    for (let col = 0; col < 7; col++) {
-
-      if (row === 0 && col < startWeekday) continue;
-      if (day > daysInMonth) continue;
-
-      const dateStr =
-        year +
-        "-" +
-        String(month + 1).padStart(2, "0") +
-        "-" +
-        String(day).padStart(2, "0");
-
-      if (habit.includes(dateStr)) {
-        ctx.fillStyle = "#ff6a3d";
-      } else {
-        ctx.fillStyle = "#666";
-      }
-
-      const x = xStart + col * (dot + gap);
-      const y = yStart + row * (dot + gap);
-
-      ctx.beginPath();
-      ctx.arc(x, y, dot / 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      day++;
+    if (diff === streak) {
+      streak++
+    } else {
+      break
     }
   }
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "64px sans-serif";
-  ctx.textAlign = "center";
+  return streak
+}
 
-  ctx.fillText(`🔥 ${streak} Day Streak`, width / 2, height - 250);
+export default function handler(req: Request) {
 
-  ctx.fillStyle = "#888";
-  ctx.font = "40px sans-serif";
+  const { searchParams } = new URL(req.url)
 
-  const monthName = today.toLocaleString("default", { month: "long" });
+  const habitParam = searchParams.get('habit') || ""
+  const habit = habitParam ? habitParam.split(",") : []
 
-  ctx.fillText(monthName + " " + year, width / 2, 200);
+  const streak = calculateStreak(habit)
 
-  res.setHeader("Content-Type", "image/png");
-  res.send(canvas.toBuffer());
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = today.getMonth()
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  const monthName = today.toLocaleString("default", { month: "long" })
+
+  const dots = []
+
+  for (let day = 1; day <= daysInMonth; day++) {
+
+    const dateStr =
+      year +
+      "-" +
+      String(month + 1).padStart(2, "0") +
+      "-" +
+      String(day).padStart(2, "0")
+
+    const completed = habit.includes(dateStr)
+
+    dots.push(
+      <div
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          background: completed ? "#ff6a3d" : "#555",
+        }}
+      />
+    )
+  }
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "1170px",
+          height: "2532px",
+          background: "black",
+          color: "white",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 60
+        }}
+      >
+
+        <div style={{ fontSize: 80 }}>
+          {monthName} {year}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(7, 40px)",
+            gap: 20
+          }}
+        >
+          {dots}
+        </div>
+
+        <div style={{ fontSize: 90 }}>
+          🔥 {streak} Day Streak
+        </div>
+
+      </div>
+    ),
+    {
+      width: 1170,
+      height: 2532,
+    }
+  )
 }
