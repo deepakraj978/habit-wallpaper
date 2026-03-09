@@ -1,107 +1,92 @@
-import { ImageResponse } from '@vercel/og'
+export default function handler(req: any, res: any) {
 
-export const config = {
-  runtime: 'edge',
-}
+  const habit = req.query.habit
+    ? req.query.habit.split(",")
+    : [];
 
-function calculateStreak(dates: string[]) {
-  const sorted = dates.sort()
-  const today = new Date()
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
 
-  let streak = 0
+  const daysInMonth = new Date(year, month, 0).getDate();
 
-  for (let i = sorted.length - 1; i >= 0; i--) {
+  function calculateStreak(dates: string[]) {
 
-    const d = new Date(sorted[i])
+    const sorted = dates.sort();
+    let streak = 0;
 
-    const diff =
-      Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
+    for (let i = sorted.length - 1; i >= 0; i--) {
 
-    if (diff === streak) {
-      streak++
-    } else {
-      break
+      const d = new Date(sorted[i]);
+
+      const diff =
+        Math.floor(
+          (today.getTime() - d.getTime()) /
+          (1000 * 60 * 60 * 24)
+        );
+
+      if (diff === streak) {
+        streak++;
+      } else {
+        break;
+      }
     }
+
+    return streak;
   }
 
-  return streak
-}
+  const streak = calculateStreak(habit);
 
-export default function handler(req: Request) {
-
-  const { searchParams } = new URL(req.url)
-
-  const habitParam = searchParams.get('habit') || ""
-  const habit = habitParam ? habitParam.split(",") : []
-
-  const streak = calculateStreak(habit)
-
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = today.getMonth()
-
-  const monthName = today.toLocaleString("default", { month: "long" })
-
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-  const dots = []
+  let dots = "";
 
   for (let day = 1; day <= daysInMonth; day++) {
 
     const dateStr =
-      year +
-      "-" +
-      String(month + 1).padStart(2, "0") +
-      "-" +
-      String(day).padStart(2, "0")
+      `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
 
-    const completed = habit.includes(dateStr)
+    const completed = habit.includes(dateStr);
 
-    dots.push(
-      `<div style="
-        width:20px;
-        height:20px;
-        border-radius:50%;
-        background:${completed ? "#ff6a3d" : "#555"};
-      "></div>`
-    )
+    const color = completed ? "#ff6a3d" : "#555";
+
+    const col = (day - 1) % 7;
+    const row = Math.floor((day - 1) / 7);
+
+    const x = col * 120 + 250;
+    const y = row * 120 + 600;
+
+    dots += `
+      <circle cx="${x}" cy="${y}" r="18" fill="${color}" />
+    `;
   }
 
-  const html = `
-  <div style="
-    width:1170px;
-    height:2532px;
-    background:black;
-    color:white;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:60px;
-    font-family:sans-serif;
-  ">
+  const monthName = today.toLocaleString("default", { month: "long" });
 
-    <div style="font-size:80px;">
+  const svg = `
+  <svg width="1170" height="2532" xmlns="http://www.w3.org/2000/svg">
+
+    <rect width="100%" height="100%" fill="black"/>
+
+    <text x="585" y="250"
+          fill="white"
+          font-size="80"
+          text-anchor="middle"
+          font-family="sans-serif">
       ${monthName} ${year}
-    </div>
+    </text>
 
-    <div style="
-      display:grid;
-      grid-template-columns:repeat(7,40px);
-      gap:20px;
-    ">
-      ${dots.join("")}
-    </div>
+    ${dots}
 
-    <div style="font-size:90px;">
+    <text x="585" y="2100"
+          fill="white"
+          font-size="90"
+          text-anchor="middle"
+          font-family="sans-serif">
       🔥 ${streak} Day Streak
-    </div>
+    </text>
 
-  </div>
-  `
+  </svg>
+  `;
 
-  return new ImageResponse(html, {
-    width: 1170,
-    height: 2532,
-  })
+  res.setHeader("Content-Type","image/svg+xml");
+  res.status(200).send(svg);
 }
