@@ -1,4 +1,7 @@
 {
   "name": "habit-wallpaper",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "dependencies": {
+    "@vercel/og": "^0.6.2"
+  }
 }
