@@ -11,6 +11,7 @@ function calculateStreak(dates: string[]) {
   let streak = 0
 
   for (let i = sorted.length - 1; i >= 0; i--) {
+
     const d = new Date(sorted[i])
 
     const diff =
@@ -39,9 +40,9 @@ export default function handler(req: Request) {
   const year = today.getFullYear()
   const month = today.getMonth()
 
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-
   const monthName = today.toLocaleString("default", { month: "long" })
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
 
   const dots = []
 
@@ -57,56 +58,50 @@ export default function handler(req: Request) {
     const completed = habit.includes(dateStr)
 
     dots.push(
-      <div
-        style={{
-          width: 18,
-          height: 18,
-          borderRadius: "50%",
-          background: completed ? "#ff6a3d" : "#555",
-        }}
-      />
+      `<div style="
+        width:20px;
+        height:20px;
+        border-radius:50%;
+        background:${completed ? "#ff6a3d" : "#555"};
+      "></div>`
     )
   }
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "1170px",
-          height: "2532px",
-          background: "black",
-          color: "white",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 60
-        }}
-      >
+  const html = `
+  <div style="
+    width:1170px;
+    height:2532px;
+    background:black;
+    color:white;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:60px;
+    font-family:sans-serif;
+  ">
 
-        <div style={{ fontSize: 80 }}>
-          {monthName} {year}
-        </div>
+    <div style="font-size:80px;">
+      ${monthName} ${year}
+    </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(7, 40px)",
-            gap: 20
-          }}
-        >
-          {dots}
-        </div>
+    <div style="
+      display:grid;
+      grid-template-columns:repeat(7,40px);
+      gap:20px;
+    ">
+      ${dots.join("")}
+    </div>
 
-        <div style={{ fontSize: 90 }}>
-          🔥 {streak} Day Streak
-        </div>
+    <div style="font-size:90px;">
+      🔥 ${streak} Day Streak
+    </div>
 
-      </div>
-    ),
-    {
-      width: 1170,
-      height: 2532,
-    }
-  )
+  </div>
+  `
+
+  return new ImageResponse(html, {
+    width: 1170,
+    height: 2532,
+  })
 }
